@@ -1,3 +1,4 @@
+import * as mongodb from 'mongodb';
 import * as mongoose from 'mongoose';
 
 // dummy variables
@@ -1302,6 +1303,66 @@ query.lean() // true
 query.lean(false)
 query.lean({})
 
+interface OtherLocation extends mongoose.Document {
+    type: string;
+}
+interface Location extends mongoose.Document {
+    name: string;
+    address: string;
+    rating: number;
+    reviews: any[];
+    ref1: mongodb.ObjectId;
+    // This type is useful for using with `populate()`
+    ref2: mongodb.ObjectId | OtherLocation;
+};
+var locDocument = <Location>{};
+var locQuery = <mongoose.DocumentQuery<Location, Location>>{};
+locQuery.count({ name: 'foo' });
+// $ExpectError
+locQuery.count({ name: 123 });
+locQuery.countDocuments({ name: 'foo' });
+locQuery.find({ _id: new mongodb.ObjectId() });
+locQuery.find({ _id: 'string-allowed' });
+locQuery.find({ _id: locDocument });
+// $ExpectError
+locQuery.find({ _id: 123 });
+// $ExpectError
+locQuery.find({ _id: { foo: 'bar' } });
+locQuery.find({ ref1: new mongodb.ObjectId() });
+locQuery.find({ ref1: 'string-allowed' });
+// $ExpectError
+locQuery.find({ ref1: 123 });
+locQuery.find({ ref2: new mongodb.ObjectId() });
+locQuery.find({ ref2: 'string-allowed' });
+// $ExpectError
+locQuery.find({ ref2: 123 });
+locQuery.find({
+    name: 'foo',
+    address: /bar/, // strings are allowed as RegExp
+    rating: 10,
+    facilities: { $exists: true },
+    'reviews.0': { $exists: true } // additional queries are allowed
+});
+// $ExpectError
+locQuery.find({ name: 123 });
+// $ExpectError
+locQuery.find({ rating: 'foo' });
+locQuery.findOne({ name: 'foo', rating: 10 });
+// $ExpectError
+locQuery.findOne({ rating: 'foo' });
+locQuery.findOneAndRemove({ name: 'foo', rating: 10 });
+// $ExpectError
+locQuery.findOneAndRemove({ rating: 'foo' });
+locQuery.findOneAndUpdate({ name: 'foo', rating: 10 }, { rating: 20 });
+// $ExpectError
+locQuery.findOneAndUpdate({ rating: 'foo' }, { rating: 20 });
+locQuery.remove({ name: 'foo', rating: 10 });
+// $ExpectError
+locQuery.remove({ rating: 'foo' });
+locQuery.update({ name: 'foo', rating: 10 }, { rating: 20 });
+// $ExpectError
+locQuery.update({ rating: 'foo' }, { rating: 20 });
+
 /*
  * section schema/array.js
  * http://mongoosejs.com/docs/api.html#schema-array-js
@@ -1883,6 +1944,7 @@ MongoModel.findById(999, function (err, user) {
     console.log(user);
   });
 });
+// $ExpectError
 MongoModel.find(999, function (err, users) {
   var opts = [{ path: 'company', match: { x: 1 }, select: 'name' }]
   var promise = MongoModel.populate(users, opts);
@@ -1965,6 +2027,7 @@ const locationSchema = new mongoose.Schema({
   openingTimes: [mongoose.Schema.Types.Mixed],
   reviews: [mongoose.SchemaTypes.Mixed]
 });
+var locDocument = <Location>{};
 var LocModel = mongoose.model<Location>("Location", locationSchema);
 LocModel.findById(999)
   .select("-reviews -rating")
@@ -1996,16 +2059,42 @@ LocModel.find({}).$where('')
     locations[0].name;
     locations[1].openingTimes;
   });
-LocModel.count({})
+LocModel.find({
+    name: 'foo',
+    address: /bar/, // strings are allowed as RegExp
+    rating: 10,
+    facilities: { $exists: true },
+    'reviews.0': { $exists: true } // additional queries are allowed
+});
+LocModel.find({ _id: new mongodb.ObjectId() });
+LocModel.find({ _id: 'string-allowed' });
+LocModel.find({ _id: locDocument });
+// $ExpectError
+LocModel.find({ _id: 123 });
+// $ExpectError
+LocModel.find({ _id: { foo: 'bar' } });
+// $ExpectError
+LocModel.find({ name: 123 });
+// $ExpectError
+LocModel.find({ rating: 'foo' });
+LocModel.count({ name: 'foo'})
   .exec(function (err, count) {
     count.toFixed();
   });
+// $ExpectError
+LocModel.count({ name: 123 });
+LocModel.countDocuments({ name: 'foo' });
+// $ExpectError
+LocModel.countDocuments({ name: 123 });
 LocModel.distinct('')
   .select('-review')
   .exec(function (err, distinct) {
     distinct.concat;
   })
   .then(cb).catch(cb);
+LocModel.exists({ name: 'foo' });
+// $ExpectError
+LocModel.exists({ name: 123 });
 LocModel.findByIdAndRemove()
   .exec(function (err, doc) {
     if (!doc) {
@@ -2026,12 +2115,15 @@ LocModel.findOne({}, function (err, doc) {
     doc.openingTimes;
   }
 });
+LocModel.findOne({ name: 'foo', rating: 10 });
 LocModel.findOneAndRemove()
   .exec(function (err, location) {
     if (location) {
       location.name;
     }
   });
+LocModel.findOneAndRemove({ name: 'foo', rating: 10 });
+LocModel.findOneAndDelete({ name: 'foo', rating: 10 });
 LocModel.findOneAndUpdate().exec().then(function (arg) {
   if (arg) {
     arg.openingTimes;
@@ -2049,6 +2141,14 @@ LocModel.geoSearch({}, {
   near: [1, 2],
   maxDistance: 22
 }, function (err, res) { res[0].openingTimes; });
+LocModel.remove({ name: 'foo' });
+LocModel.deleteOne({ name: 'foo' });
+LocModel.deleteMany({ name: 'foo' });
+LocModel.replaceOne({ name: 'foo' }, { name: 'bar' });
+LocModel.update({ name: 'foo' }, { name: 'bar' });
+LocModel.updateOne({ name: 'foo' }, { name: 'bar' });
+LocModel.updateMany({ name: 'foo' }, { name: 'bar' });
+
 interface IStatics {
   staticMethod2: (a: number) => string;
 }
