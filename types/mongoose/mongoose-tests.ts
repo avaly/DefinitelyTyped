@@ -1303,10 +1303,10 @@ query.lean() // true
 query.lean(false)
 query.lean({})
 
-interface OtherLocation extends mongoose.Document {
+type OtherLocation = mongoose.Document & {
     type: string;
 }
-interface Location extends mongoose.Document {
+type Location1 = mongoose.Document & {
     name: string;
     address: string;
     rating: number;
@@ -1315,15 +1315,15 @@ interface Location extends mongoose.Document {
     // This type is useful for using with `populate()`
     ref2: mongodb.ObjectId | OtherLocation;
 };
-var locDocument = <Location>{};
-var locQuery = <mongoose.DocumentQuery<Location, Location>>{};
+var locDocument1 = <Location1>{};
+var locQuery = <mongoose.DocumentQuery<Location1, Location1>>{};
 locQuery.count({ name: 'foo' });
 // $ExpectError
 locQuery.count({ name: 123 });
 locQuery.countDocuments({ name: 'foo' });
 locQuery.find({ _id: new mongodb.ObjectId() });
 locQuery.find({ _id: 'string-allowed' });
-locQuery.find({ _id: locDocument });
+locQuery.find({ _id: locDocument1 });
 // $ExpectError
 locQuery.find({ _id: 123 });
 // $ExpectError
@@ -1362,6 +1362,21 @@ locQuery.remove({ rating: 'foo' });
 locQuery.update({ name: 'foo', rating: 10 }, { rating: 20 });
 // $ExpectError
 locQuery.update({ rating: 'foo' }, { rating: 20 });
+async function leanTests() {
+  var location = await locQuery.lean().exec();
+  if (location) {
+      // $ExpectType ObjectId
+      location._id;
+      // $ExpectType string
+      location.name;
+      // $ExpectType number
+      location.rating;
+      // $ExpectError
+      location.unknown;
+      // $ExpectError
+      location.save();
+  }
+}
 
 /*
  * section schema/array.js
@@ -1890,12 +1905,6 @@ interface ModelUser {
   name: string;
   abctest: string;
 }
-MongoModel.findOne({ type: 'iphone' }).select('name').lean().exec()
-.then(function(doc: ModelUser) {
-  doc._id;
-  doc.name;
-  doc.abctest;
-});
 MongoModel.findOneAndRemove({}, {}, cb);
 MongoModel.findOneAndRemove({}, {});
 MongoModel.findOneAndRemove({}, cb);
@@ -2009,7 +2018,7 @@ MongoModel.find({
 })
 .exec();
 /* practical example */
-interface Location extends mongoose.Document {
+type Location = mongoose.Document & {
   name: string;
   address: string;
   rating: number;
@@ -2115,7 +2124,20 @@ LocModel.findOne({}, function (err, doc) {
     doc.openingTimes;
   }
 });
-LocModel.findOne({ name: 'foo', rating: 10 });
+LocModel
+    .findOne({ name: 'foo', rating: 10 })
+    .lean()
+    .exec()
+    .then(function(doc) {
+        if (doc) {
+            // $ExpectType ObjectId
+            doc._id;
+            // $ExpectType string
+            doc.name;
+            // $ExpectError
+            doc.unknown;
+        }
+    });
 LocModel.findOneAndRemove()
   .exec(function (err, location) {
     if (location) {

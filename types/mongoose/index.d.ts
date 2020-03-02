@@ -2043,7 +2043,7 @@ declare module "mongoose" {
      * getters/setters or other Mongoose magic applied.
      * @param {Boolean|Object} bool defaults to true
      */
-    lean<P = any>(bool?: boolean | object): Query<T extends Array<any> ? P[] : (P | null)> & QueryHelpers;
+    lean<P = DocumentDefinition<DocType>>(bool?: boolean | object): Query<T extends Array<any> ? P[] : (P | null)> & QueryHelpers;
 
     /** Specifies the maximum number of documents the query will return. Cannot be used with distinct() */
     limit(val: number): this;
@@ -3593,7 +3593,7 @@ declare module "mongoose" {
   }
 
   /* Helper type to extract a definition type from a Document type */
-  export type DocumentDefinition<T> = T extends Document & infer D ? D : never;
+  type DocumentDefinition<T> = T extends Document & infer D ? D & { _id: mongodb.ObjectId } : never;
 
   /**
    * Patched version of FilterQuery to also allow:
